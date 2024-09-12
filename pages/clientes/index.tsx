@@ -431,7 +431,7 @@ export default function Clientes() {
               <TableBody>
                 {newClient.map((client) => (
                   <TableRow key={client.id}>
-                    <TableCell>
+                    <TableCell className='flex justify-center pt-16'>
                       <Checkbox
                         onCheckedChange={(isChecked) =>
                           handleSelectClient(client.id, isChecked === true)
