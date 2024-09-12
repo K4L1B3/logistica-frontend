@@ -67,6 +67,12 @@ export default function Clientes() {
 
   const [selectedClientIds, setSelectedClientIds] = useState<number[]>([]);
 
+  const [isEditing, setIsEditing] = useState(false);
+
+  const [clientIdBeingEdited, setClientIdBeingEdited] = useState<number | null>(
+    null
+  );
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
     console.log('Mudando o campo');
@@ -83,15 +89,22 @@ export default function Clientes() {
     }));
   };
 
-  const handleAddClient = () => {
-    console.log('Dados do client: ', formClientData);
-
-    const newId = newClient.length + 1;
-
-    setNewClient((prevClients) => [
-      ...prevClients,
-      { ...formClientData, id: newId },
-    ]);
+  const handleSaveClient = () => {
+    if (isEditing && clientIdBeingEdited !== null) {
+      setNewClient((prevClients) =>
+        prevClients.map((client) =>
+          client.id === clientIdBeingEdited
+            ? { ...client, ...formClientData }
+            : client
+        )
+      );
+    } else {
+      const newId = newClient.length + 1;
+      setNewClient((prevClients) => [
+        ...prevClients,
+        { ...formClientData, id: newId },
+      ]);
+    }
 
     setFormClientData({
       razaoSocial: '',
@@ -108,6 +121,9 @@ export default function Clientes() {
       numero: '',
       cidade: '',
     });
+    setIsEditing(false);
+    setClientIdBeingEdited(null);
+    setIsClientModalOpen(false);
   };
 
   const handleSelectClient = (clientId: number, isChecked: boolean) => {
@@ -122,12 +138,34 @@ export default function Clientes() {
 
   const handleRemoveClient = () => {
     setNewClient((prevClients) => {
-     return  prevClients.filter((client) => !selectedClientIds.includes(client.id))
+      return prevClients.filter(
+        (client) => !selectedClientIds.includes(client.id)
+      );
     });
     setSelectedClientIds([]);
   };
 
-  const handleEditClient = () => {};
+  const handleEditClient = (client: IClient) => {
+    // Carrega os dados do cliente no formulário
+    setFormClientData({
+      razaoSocial: client.razaoSocial,
+      nomeFantasia: client.nomeFantasia,
+      cnpj: client.cnpj,
+      telefone: client.telefone,
+      email: client.email,
+      tipoServico: client.tipoServico,
+      endereco: client.endereco,
+      cep: client.cep,
+      complemento: client.complemento,
+      estado: client.estado,
+      bairro: client.bairro,
+      numero: client.numero,
+      cidade: client.cidade,
+    });
+    setClientIdBeingEdited(client.id); // Armazena o ID do cliente que está sendo editado
+    setIsEditing(true); // Define que estamos no modo de edição
+    setIsClientModalOpen(true); // Abre a modal
+  };
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -350,24 +388,20 @@ export default function Clientes() {
                   <Button
                     onClick={() => {
                       setIsClientModalOpen(false);
-                      handleAddClient();
+                      handleSaveClient();
                     }}
                   >
-                    Salvar
+                    {isEditing ? 'Atualizar' : 'Salvar'}
                   </Button>
                 </div>
               </DialogContent>
             </Dialog>
-            <Button className="bg-red-500 text-white hover:bg-red-600"
+            <Button
+              className="bg-red-500 text-white hover:bg-red-600"
               onClick={handleRemoveClient}
               disabled={selectedClientIds.length === 0}
-              >
-              Excluir
-            </Button>
-            <Button className="bg-blue-500 text-white hover:bg-blue-600"
-              disabled={selectedClientIds.length === 0}
             >
-              Editar
+              Excluir
             </Button>
           </div>
 
@@ -375,16 +409,16 @@ export default function Clientes() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[50px]">
-                    Selecione
-                  </TableHead>
+                  <TableHead className="w-[50px]">Selecione</TableHead>
                   <TableHead>ID</TableHead>
                   <TableHead className="min-w-[200px]">Nome Fantasia</TableHead>
                   <TableHead className="min-w-[200px]">Razão Social</TableHead>
                   <TableHead className="min-w-[200px]">CNPJ</TableHead>
                   <TableHead className="min-w-[200px]">Email</TableHead>
                   <TableHead className="min-w-[200px]">Telefone</TableHead>
-                  <TableHead>Serviço Fornecido</TableHead>
+                  <TableHead className="min-w-[200px]">
+                    Serviço Fornecido
+                  </TableHead>
                   <TableHead className="min-w-[200px]">Endereço</TableHead>
                   <TableHead>Bairro</TableHead>
                   <TableHead className="min-w-[100px]">Cep</TableHead>
@@ -398,7 +432,11 @@ export default function Clientes() {
                 {newClient.map((client) => (
                   <TableRow key={client.id}>
                     <TableCell>
-                      <Checkbox onCheckedChange={(isChecked) => handleSelectClient(client.id, isChecked === true)}/>
+                      <Checkbox
+                        onCheckedChange={(isChecked) =>
+                          handleSelectClient(client.id, isChecked === true)
+                        }
+                      />
                     </TableCell>
                     <TableCell>{client.id}</TableCell>
                     <TableCell className="font-medium">
@@ -418,6 +456,15 @@ export default function Clientes() {
                     <TableCell>{client.estado}</TableCell>
                     <TableCell>{client.numero}</TableCell>
                     <TableCell>{client.cidade}</TableCell>
+                    <TableCell>
+                      <Button
+                        className="bg-blue-500 text-white hover:bg-blue-600"
+                        onClick={() => handleEditClient(client)}
+                        disabled={selectedClientIds.length === 0}
+                      >
+                        Editar
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
