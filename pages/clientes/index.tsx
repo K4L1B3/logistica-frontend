@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -26,6 +26,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Building2, Menu, PlusCircle } from 'lucide-react';
+
+import * as ClientService from '../../services/api';
 
 interface IClient {
   id: number;
@@ -136,7 +138,7 @@ export default function Clientes() {
     }
   };
 
-  const handleRemoveClient = () => {
+  const handleRemoveClient = async () => {
     setNewClient((prevClients) => {
       return prevClients.filter(
         (client) => !selectedClientIds.includes(client.id)
@@ -166,6 +168,20 @@ export default function Clientes() {
     setIsEditing(true); // Define que estamos no modo de edição
     setIsClientModalOpen(true); // Abre a modal
   };
+
+  async function fetchClients() {
+    try {
+      const GetAllClients = await ClientService.getAllClients()
+      console.log(GetAllClients);
+    }
+    catch(error) {
+      console.error('Falha ao buscar clientes', error);
+    }
+  }
+
+  useEffect(() => {
+    fetchClients();
+  },[])
 
   return (
     <div className="min-h-screen bg-gray-100">
