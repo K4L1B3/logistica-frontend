@@ -30,7 +30,7 @@ import { Building2, Menu, PlusCircle } from 'lucide-react';
 import * as ClientService from '../../services/api';
 
 interface IClient {
-  id: number;
+  id?: number; 
   razaoSocial: string;
   nomeFantasia: string;
   cnpj: string;
@@ -46,9 +46,10 @@ interface IClient {
   cidade: string;
 }
 
-export default function Clientes() {
-  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
 
+export default function Clientes() {
+
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [formClientData, setFormClientData] = useState<Omit<IClient, 'id'>>({
     razaoSocial: '',
     nomeFantasia: '',
@@ -64,20 +65,13 @@ export default function Clientes() {
     numero: '',
     cidade: '',
   });
-
-  const [newClient, setNewClient] = useState<IClient[]>([]);
-
+  const [clients, setClients] = useState<IClient[]>([]);
   const [selectedClientIds, setSelectedClientIds] = useState<number[]>([]);
-
   const [isEditing, setIsEditing] = useState(false);
-
-  const [clientIdBeingEdited, setClientIdBeingEdited] = useState<number | null>(
-    null
-  );
+  const [clientIdBeingEdited, setClientIdBeingEdited] = useState<number | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
-    console.log('Mudando o campo');
     setFormClientData((prevFormData) => ({
       ...prevFormData,
       [id]: value,
@@ -91,64 +85,59 @@ export default function Clientes() {
     }));
   };
 
-  const handleSaveClient = () => {
-    if (isEditing && clientIdBeingEdited !== null) {
-      setNewClient((prevClients) =>
-        prevClients.map((client) =>
-          client.id === clientIdBeingEdited
-            ? { ...client, ...formClientData }
-            : client
-        )
-      );
-    } else {
-      const newId = newClient.length + 1;
-      setNewClient((prevClients) => [
-        ...prevClients,
-        { ...formClientData, id: newId },
-      ]);
+  const fetchClients = async () => {
+    try {
+      const clientsData: IClient[] = await ClientService.getAllClients();
+      setClients(clientsData); // Atualize o estado com os dados dos clientes
+      console.log(clientsData);
+    } catch (error) {
+      console.error('Falha ao buscar clientes', error);
     }
-
-    setFormClientData({
-      razaoSocial: '',
-      nomeFantasia: '',
-      cnpj: '',
-      telefone: '',
-      email: '',
-      tipoServico: '',
-      endereco: '',
-      cep: '',
-      complemento: '',
-      estado: '',
-      bairro: '',
-      numero: '',
-      cidade: '',
-    });
-    setIsEditing(false);
-    setClientIdBeingEdited(null);
-    setIsClientModalOpen(false);
-  };
-
-  const handleSelectClient = (clientId: number, isChecked: boolean) => {
-    if (isChecked) {
-      setSelectedClientIds((prevIds) => [...prevIds, clientId]);
-    } else {
-      setSelectedClientIds((prevIds) =>
-        prevIds.filter((id) => id !== clientId)
-      );
+  };  
+  
+  const handleSaveClient = async () => {
+    try {
+      if (isEditing && clientIdBeingEdited !== null) {
+        // Atualizar cliente existente
+        await ClientService.updateClient(clientIdBeingEdited, formClientData);
+        setClients((prevClients) =>
+          prevClients.map((client) =>
+            client.id === clientIdBeingEdited
+              ? { ...client, ...formClientData, id: client.id } // Mantenha o id ao atualizar
+              : client
+          )
+        );
+      } else {
+        // Criar novo cliente
+        const newClient = await ClientService.createClient(formClientData);
+        setClients((prevClients) => [...prevClients, { ...newClient, id: newClient.id }]); // Adicione o cliente com o id retornado
+      }
+  
+      // Resetar o formulário e estados
+      setFormClientData({
+        razaoSocial: '',
+        nomeFantasia: '',
+        cnpj: '',
+        telefone: '',
+        email: '',
+        tipoServico: '',
+        endereco: '',
+        cep: '',
+        complemento: '',
+        estado: '',
+        bairro: '',
+        numero: '',
+        cidade: '',
+      });
+      setIsEditing(false);
+      setClientIdBeingEdited(null);
+      setIsClientModalOpen(false);
+    } catch (error) {
+      console.error('Erro ao salvar cliente', error);
     }
   };
-
-  const handleRemoveClient = async () => {
-    setNewClient((prevClients) => {
-      return prevClients.filter(
-        (client) => !selectedClientIds.includes(client.id)
-      );
-    });
-    setSelectedClientIds([]);
-  };
-
+  
   const handleEditClient = (client: IClient) => {
-    // Carrega os dados do cliente no formulário
     setFormClientData({
       razaoSocial: client.razaoSocial,
       nomeFantasia: client.nomeFantasia,
@@ -164,24 +153,41 @@ export default function Clientes() {
       numero: client.numero,
       cidade: client.cidade,
     });
-    setClientIdBeingEdited(client.id); // Armazena o ID do cliente que está sendo editado
-    setIsEditing(true); // Define que estamos no modo de edição
-    setIsClientModalOpen(true); // Abre a modal
+    setClientIdBeingEdited(client.id!); // Use "!" para forçar que o id nunca seja undefined ao editar
+    setIsEditing(true);
+    setIsClientModalOpen(true);
+  };
+  
+  const handleSelectClient = (clientId: number, isChecked: boolean) => {
+    if (isChecked) {
+      setSelectedClientIds((prevIds) => [...prevIds, clientId]);
+    } else {
+      setSelectedClientIds((prevIds) => prevIds.filter((id) => id !== clientId));
+    }
   };
 
-  async function fetchClients() {
+  const handleRemoveClient = async () => {
     try {
-      const GetAllClients = await ClientService.getAllClients()
-      console.log(GetAllClients);
+      await Promise.all(
+        selectedClientIds.map(async (id) => {
+          if (id !== undefined) {
+            await ClientService.deleteClient(id);
+          }
+        })
+      );
+      setClients((prevClients) =>
+        prevClients.filter((client) => !selectedClientIds.includes(client.id!)) // Certifique-se de que o id existe
+      );
+      setSelectedClientIds([]);
+    } catch (error) {
+      console.error('Erro ao deletar clientes', error);
     }
-    catch(error) {
-      console.error('Falha ao buscar clientes', error);
-    }
-  }
+  };
+  
 
   useEffect(() => {
     fetchClients();
-  },[])
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -445,12 +451,12 @@ export default function Clientes() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {newClient.map((client) => (
+                {clients.map((client) => (
                   <TableRow key={client.id}>
                     <TableCell className='flex justify-center pt-16'>
                       <Checkbox
                         onCheckedChange={(isChecked) =>
-                          handleSelectClient(client.id, isChecked === true)
+                          handleSelectClient(client.id!, isChecked === true)
                         }
                       />
                     </TableCell>
