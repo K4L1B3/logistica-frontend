@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -27,40 +27,110 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Building2, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
+import * as SupplierService from '../../services/supplier-api';
 
-interface IStatusColors {
-  Ativo: string;
-  Inativo: string;
-}
-
-type Status = "Ativo" | "Inativo";
-
+// Interface do fornecedor
 interface Supplier {
-  id: number;
+  id?: number;
   name: string;
   contact: string;
   serviceType: string;
-  status: Status;
+  status: "Ativo" | "Inativo";
 }
 
-const suppliers: Supplier[] = [
-  { id: 1, name: "Fornecedor A", contact: "contato@fornecedora.com", serviceType: "Matéria-prima", status: "Ativo" },
-  { id: 2, name: "Fornecedor B", contact: "(22) 2345-6789", serviceType: "Logística", status: "Ativo" },
-  { id: 3, name: "Fornecedor C", contact: "contato@fornecedorc.com", serviceType: "Embalagens", status: "Inativo" },
-  { id: 4, name: "Fornecedor D", contact: "(44) 4567-8901", serviceType: "Matéria-prima", status: "Ativo" },
-  { id: 5, name: "Fornecedor E", contact: "contato@fornecedore.com", serviceType: "Logística", status: "Ativo" },
-];
-
-const products = ['Sal', 'Açúcar', 'Café', 'Arroz', 'Feijão', 'Óleo'];
-
-const statusColors: Record<Status, string> = {
+const statusColors: Record<"Ativo" | "Inativo", string> = {
   Ativo: "bg-green-100 text-green-800",
   Inativo: "bg-red-100 text-red-800",
 };
 
 export default function Fornecedores() {
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [selectedSupplierIds, setSelectedSupplierIds] = useState<number[]>([]);
+  const [formSupplierData, setFormSupplierData] = useState<Omit<Supplier, 'id'>>({
+    name: '',
+    contact: '',
+    serviceType: '',
+    status: 'Ativo',
+  });
+  const [isEditing, setIsEditing] = useState(false);
+  const [supplierIdBeingEdited, setSupplierIdBeingEdited] = useState<number | null>(null);
+
+  // Função para buscar fornecedores do backend
+  const fetchSuppliers = async () => {
+    try {
+      const suppliersData = await SupplierService.getAllSuppliers();
+      setSuppliers(suppliersData);
+    } catch (error) {
+      console.error('Erro ao buscar fornecedores', error);
+    }
+  };
+
+  // Função para salvar (criar/atualizar) um fornecedor
+  const handleSaveSupplier = async () => {
+    try {
+      if (isEditing && supplierIdBeingEdited !== null) {
+        // Atualiza fornecedor existente
+        await SupplierService.updateSupplier(supplierIdBeingEdited, formSupplierData);
+        setSuppliers((prevSuppliers) =>
+          prevSuppliers.map((supplier) =>
+            supplier.id === supplierIdBeingEdited ? { ...supplier, ...formSupplierData } : supplier
+          )
+        );
+      } else {
+        // Cria um novo fornecedor
+        const newSupplier = await SupplierService.createSupplier(formSupplierData);
+        setSuppliers((prevSuppliers) => [...prevSuppliers, newSupplier]);
+      }
+
+      // Resetar o formulário e estados
+      setFormSupplierData({
+        name: '',
+        contact: '',
+        serviceType: '',
+        status: 'Ativo',
+      });
+      setIsEditing(false);
+      setSupplierIdBeingEdited(null);
+      setIsSupplierModalOpen(false);
+    } catch (error) {
+      console.error('Erro ao salvar fornecedor', error);
+    }
+  };
+
+  // Função para editar fornecedor
+  const handleEditSupplier = (supplier: Supplier) => {
+    setFormSupplierData({
+      name: supplier.name,
+      contact: supplier.contact,
+      serviceType: supplier.serviceType,
+      status: supplier.status,
+    });
+    setSupplierIdBeingEdited(supplier.id!);
+    setIsEditing(true);
+    setIsSupplierModalOpen(true);
+  };
+
+  // Função para remover fornecedor
+  const handleRemoveSuppliers = async () => {
+    try {
+      await Promise.all(
+        selectedSupplierIds.map(async (id) => {
+          await SupplierService.deleteSupplier(id);
+        })
+      );
+      setSuppliers((prevSuppliers) =>
+        prevSuppliers.filter((supplier) => !selectedSupplierIds.includes(supplier.id!))
+      );
+      setSelectedSupplierIds([]);
+    } catch (error) {
+      console.error('Erro ao deletar fornecedores', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchSuppliers();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -71,42 +141,27 @@ export default function Fornecedores() {
             <nav>
               <ul className="flex space-x-4">
                 <li>
-                  <a
-                    href="/pedidos"
-                    className="text-gray-600 hover:text-gray-900"
-                  >
+                  <a href="/pedidos" className="text-gray-600 hover:text-gray-900">
                     Pedidos
                   </a>
                 </li>
                 <li>
-                  <a
-                    href="/clientes"
-                    className="text-gray-600 hover:text-gray-900"
-                  >
+                  <a href="/clientes" className="text-gray-600 hover:text-gray-900">
                     Clientes
                   </a>
                 </li>
                 <li>
-                  <a
-                    href="/produtos"
-                    className="text-gray-600 hover:text-gray-900"
-                  >
+                  <a href="/produtos" className="text-gray-600 hover:text-gray-900">
                     Produtos
                   </a>
                 </li>
                 <li>
-                  <a
-                    href="/fornecedores"
-                    className="font-semibold text-gray-600 hover:text-gray-900"
-                  >
+                  <a href="/fornecedores" className="font-semibold text-gray-600 hover:text-gray-900">
                     Fornecedores
                   </a>
                 </li>
                 <li>
-                  <a
-                    href="/desempenho"
-                    className="text-gray-600 hover:text-gray-900"
-                  >
+                  <a href="/desempenho" className="text-gray-600 hover:text-gray-900">
                     Desempenho Logístico
                   </a>
                 </li>
@@ -114,11 +169,6 @@ export default function Fornecedores() {
             </nav>
           </div>
           <div className="flex items-center space-x-4">
-            <div className="relative">
-              <div className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-gray-300 text-xs font-bold text-gray-700">
-                ADMIN
-              </div>
-            </div>
             <Menu className="h-6 w-6 cursor-pointer text-gray-600" />
           </div>
         </div>
@@ -126,19 +176,12 @@ export default function Fornecedores() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="rounded-lg bg-white p-6 shadow-md">
-          <h1 className="mb-6 text-2xl font-bold text-gray-800">
-            Gerenciamento de Fornecedores
-          </h1>
+          <h1 className="mb-6 text-2xl font-bold text-gray-800">Gerenciamento de Fornecedores</h1>
 
           <div className="mb-6 flex space-x-4">
-            <Dialog
-              open={isSupplierModalOpen}
-              onOpenChange={setIsSupplierModalOpen}
-            >
+            <Dialog open={isSupplierModalOpen} onOpenChange={setIsSupplierModalOpen}>
               <DialogTrigger asChild>
-                <Button className="bg-green-500 text-white hover:bg-green-600">
-                  Criar
-                </Button>
+                <Button className="bg-green-500 text-white hover:bg-green-600">Criar</Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
@@ -149,48 +192,39 @@ export default function Fornecedores() {
                     <Label htmlFor="name" className="text-right">
                       Nome da Empresa
                     </Label>
-                    <Input id="name" className="col-span-3" />
+                    <Input
+                      id="name"
+                      value={formSupplierData.name}
+                      onChange={(e) => setFormSupplierData({ ...formSupplierData, name: e.target.value })}
+                      className="col-span-3"
+                    />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="contact" className="text-right">
                       Contato
                     </Label>
-                    <Input id="contact" className="col-span-3" />
+                    <Input
+                      id="contact"
+                      value={formSupplierData.contact}
+                      onChange={(e) => setFormSupplierData({ ...formSupplierData, contact: e.target.value })}
+                      className="col-span-3"
+                    />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="serviceType" className="text-right">
                       Tipo de Serviço
                     </Label>
-                    <Select>
+                    <Select
+                      value={formSupplierData.serviceType}
+                      onValueChange={(value) => setFormSupplierData({ ...formSupplierData, serviceType: value })}
+                    >
                       <SelectTrigger className="col-span-3">
                         <SelectValue placeholder="Selecione o tipo de serviço" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="materia-prima">
-                          Matéria-prima
-                        </SelectItem>
+                        <SelectItem value="materia-prima">Matéria-prima</SelectItem>
                         <SelectItem value="logistica">Logística</SelectItem>
                         <SelectItem value="embalagens">Embalagens</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="product" className="text-right">
-                      Produto Fornecido
-                    </Label>
-                    <Select>
-                      <SelectTrigger className="col-span-3">
-                        <SelectValue placeholder="Selecione o produto" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {products.map((product) => (
-                          <SelectItem
-                            key={product}
-                            value={product.toLowerCase()}
-                          >
-                            {product}
-                          </SelectItem>
-                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -198,29 +232,27 @@ export default function Fornecedores() {
                     <Label htmlFor="status" className="text-right">
                       Status
                     </Label>
-                    <Select>
+                    <Select
+                      value={formSupplierData.status}
+                      onValueChange={(value) => setFormSupplierData({ ...formSupplierData, status: value as "Ativo" | "Inativo" })}
+                    >
                       <SelectTrigger className="col-span-3">
                         <SelectValue placeholder="Selecione o status" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="ativo">Ativo</SelectItem>
-                        <SelectItem value="inativo">Inativo</SelectItem>
+                        <SelectItem value="Ativo">Ativo</SelectItem>
+                        <SelectItem value="Inativo">Inativo</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </form>
                 <div className="flex justify-end">
-                  <Button onClick={() => setIsSupplierModalOpen(false)}>
-                    Salvar
-                  </Button>
+                  <Button onClick={handleSaveSupplier}>Salvar</Button>
                 </div>
               </DialogContent>
             </Dialog>
-            <Button className="bg-red-500 text-white hover:bg-red-600">
+            <Button className="bg-red-500 text-white hover:bg-red-600" onClick={handleRemoveSuppliers} disabled={selectedSupplierIds.length === 0}>
               Excluir
-            </Button>
-            <Button className="bg-blue-500 text-white hover:bg-blue-600">
-              Editar
             </Button>
           </div>
 
@@ -242,55 +274,30 @@ export default function Fornecedores() {
                 {suppliers.map((supplier) => (
                   <TableRow key={supplier.id}>
                     <TableCell>
-                      <Checkbox />
+                      <Checkbox
+                        onCheckedChange={(checked) =>
+                          setSelectedSupplierIds((prev) =>
+                            checked ? [...prev, supplier.id!] : prev.filter((id) => id !== supplier.id)
+                          )
+                        }
+                      />
                     </TableCell>
                     <TableCell>{supplier.id}</TableCell>
-                    <TableCell className="font-medium">
-                      {supplier.name}
-                    </TableCell>
+                    <TableCell className="font-medium">{supplier.name}</TableCell>
                     <TableCell>{supplier.contact}</TableCell>
                     <TableCell>{supplier.serviceType}</TableCell>
                     <TableCell>
-                      <Badge
-                        className={
-                          statusColors[supplier.status as keyof IStatusColors]
-                        }
-                      >
-                        {supplier.status}
-                      </Badge>
+                      <Badge className={statusColors[supplier.status]}>{supplier.status}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Button className="bg-blue-500 text-white hover:bg-blue-600" onClick={() => handleEditSupplier(supplier)}>
+                        Editar
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          </div>
-
-          <div className="mt-6 flex items-center justify-between">
-            <Button
-              variant="outline"
-              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="mr-2 h-4 w-4" /> Anterior
-            </Button>
-            <div className="flex items-center space-x-2">
-              {[1, 2, 3].map((page) => (
-                <Button
-                  key={page}
-                  variant={currentPage === page ? 'default' : 'outline'}
-                  onClick={() => setCurrentPage(page)}
-                >
-                  {page}
-                </Button>
-              ))}
-            </div>
-            <Button
-              variant="outline"
-              onClick={() => setCurrentPage((prev) => prev + 1)}
-              disabled={currentPage === 3}
-            >
-              Próximo <ChevronRight className="ml-2 h-4 w-4" />
-            </Button>
           </div>
         </div>
       </main>

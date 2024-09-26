@@ -1,10 +1,12 @@
-// Importação de estilos globais
-import React from 'react';
+// pages/_app.tsx
+import React, { useEffect } from 'react';
 import '../src/app/globals.css';
-import { useEffect } from 'react';
 import i18n from '@/utils/i18n';
 import { I18nextProvider } from 'react-i18next';
 import { AppProps } from 'next/app';
+
+// Importando o roteamento da pasta routes
+import AppRoutes from '../routes/AppRoutes';
 
 // Esta é a assinatura padrão do componente _app
 function MyApp({ Component, pageProps }: AppProps) {
@@ -16,7 +18,10 @@ function MyApp({ Component, pageProps }: AppProps) {
 
   return (
     <I18nextProvider i18n={i18n}>
-      <Component {...pageProps} />
+      {/* Passando o Component como children */}
+      <AppRoutes>
+        <Component {...pageProps} />
+      </AppRoutes>
     </I18nextProvider>
   );
 }

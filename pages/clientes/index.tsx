@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/dialog';
 import { Building2, Menu, PlusCircle } from 'lucide-react';
 
-import * as ClientService from '../../services/api';
+import * as ClientService from '../../services/clients-api';
 
 interface IClient {
   id?: number; 
