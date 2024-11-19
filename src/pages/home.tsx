@@ -9,8 +9,8 @@ import ProdutosPage, { ProdutosComponent } from '../components/template/produtos
 
 export default function ManagementPage() {
   return (
-    <div className="container mx-auto p-4">
-      <Tabs defaultValue="clientes" className="w-full">
+    <div className="w-full">
+      <Tabs defaultValue="clientes" className="w-full p-7">
         <TabsList className="grid w-full grid-cols-4 mb-8 bg-gray-200">
           <TabsTrigger 
             value="clientes" 

@@ -117,9 +117,9 @@ export function PedidosPage() {
   }
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="mx-auto p-4">
       <h1 className="text-2xl font-bold mb-6">Gerenciamento de Pedidos</h1>
-      
+
       <div className="grid gap-4 mb-6">
         <div className="grid grid-cols-2 gap-4">
           <Select
@@ -162,7 +162,7 @@ export function PedidosPage() {
             </SelectContent>
           </Select>
         </div>
-        
+
         <div className="grid grid-cols-2 gap-4">
           <Input
             type="number"
@@ -196,12 +196,16 @@ export function PedidosPage() {
           {newPedido.notaFiscal && <span>{newPedido.notaFiscal.name}</span>}
         </div>
 
-        <Button 
-          onClick={handleAddPedido}
-          className="w-full bg-black hover:bg-black/90 text-white"
-        >
-          Adicionar Pedido
-        </Button>
+        <div className='flex justify-end'>
+          <Button
+            onClick={handleAddPedido}
+            className="w-1/6 bg-black hover:bg-black/90 text-white"
+          >
+            Adicionar Pedido
+          </Button>
+        </div>
+
+
       </div>
 
       <div className="bg-white rounded-lg overflow-hidden">
@@ -331,9 +335,9 @@ export function PedidosPage() {
                       <Button onClick={() => handleEditPedido(pedido)} variant="outline" size="icon">
                         <Pencil size={16} />
                       </Button>
-                      <Button 
-                        onClick={() => handleRemovePedido(pedido.id!)} 
-                        variant="outline" 
+                      <Button
+                        onClick={() => handleRemovePedido(pedido.id!)}
+                        variant="outline"
                         size="icon"
                       >
                         <Trash2 size={16} />

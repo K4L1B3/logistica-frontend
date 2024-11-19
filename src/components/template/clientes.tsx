@@ -1,10 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PlusCircle, Pencil, Trash2 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table"
 import {
   Dialog,
   DialogContent,
@@ -13,6 +20,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import { createClient, deleteClient, getAllClients, updateClient } from '@/services/client.service'
 
 interface Cliente {
   id?: string;
@@ -22,12 +30,9 @@ interface Cliente {
   cnpj: string;
 }
 
-export function ClientesComponent() {
-  const [customers, setCustomers] = useState<Cliente[]>([
-    { id: '1', nome: 'Empresa A', telefone: '(11) 1234-5678', email: 'contato@empresaa.com', cnpj: '12.345.678/0001-90' },
-    { id: '2', nome: 'Empresa B', telefone: '(21) 9876-5432', email: 'contato@empresab.com', cnpj: '98.765.432/0001-10' },
-  ])
 
+export function ClientesComponent() {
+  const [customers, setCustomers] = useState<Cliente[]>([])
   const [editingCustomer, setEditingCustomer] = useState<Cliente | null>(null)
   const [newCustomer, setNewCustomer] = useState<Cliente>({
     nome: '',
@@ -36,12 +41,33 @@ export function ClientesComponent() {
     cnpj: '',
   })
 
-  const handleAddCustomer = () => {
+  useEffect(() => {
+    const fetchClientes = async () => {
+      try {
+        const dados = await getAllClients();
+        setCustomers(dados);
+        console.log(dados)
+      } catch (erro) {
+        console.error('Erro ao buscar clientes:', erro);
+      }
+    };
+
+    fetchClientes();
+  }, []);
+
+
+  const handleAddCustomer = async () => {
     const customerToAdd = {
       ...newCustomer,
-      id: Date.now().toString(),
     }
-    setCustomers([...customers, customerToAdd])
+    try {
+      const response = await createClient(customerToAdd)
+      console.log('Cliente criado RESPONSE: ', response)
+
+      setCustomers([...customers, response])
+    } catch (error) {
+      console.error(error);
+    }
     setNewCustomer({
       nome: '',
       telefone: '',
@@ -54,15 +80,34 @@ export function ClientesComponent() {
     setEditingCustomer(customer)
   }
 
-  const handleSaveCustomer = () => {
+  const handleSaveCustomer = async () => {
     if (editingCustomer) {
-      setCustomers(customers.map(c => c.id === editingCustomer.id ? editingCustomer : c))
-      setEditingCustomer(null)
+      if (editingCustomer.id && editingCustomer) {
+        try {
+          const response = await updateClient(editingCustomer.id!, editingCustomer)
+          console.log('Cliente Atualizado RESPONSE: ', response)
+          
+          setCustomers(prevCustumers => (
+            prevCustumers.map(c => c.id === editingCustomer.id ? editingCustomer : c)
+          )
+         )
+          setEditingCustomer(null)
+        } catch (error) {
+          console.error(error, 'Não foi possível criar o cliente');
+        }
+      } else {
+        console.error('O custumer está vazio')
+      }
     }
   }
 
-  const handleRemoveCustomer = (id: string) => {
-    setCustomers(customers.filter(c => c.id !== id))
+  const handleRemoveCustomer = async (id: string) => {
+    try {
+      await deleteClient(id)
+      setCustomers(customers.filter(c => c.id !== id))
+    } catch (error) {
+      console.error(error, 'Não foi possível criar o cliente')
+    }
   }
 
   return (
@@ -149,8 +194,8 @@ export function ClientesComponent() {
                 <TableCell>
                   {editingCustomer?.id === customer.id ? (
                     <Input
-                      value={editingCustomer.nome}
-                      onChange={(e) => setEditingCustomer({ ...editingCustomer, nome: e.target.value })}
+                      value={editingCustomer!.nome}
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer!, nome: e.target.value })}
                     />
                   ) : (
                     customer.nome
@@ -159,8 +204,8 @@ export function ClientesComponent() {
                 <TableCell>
                   {editingCustomer?.id === customer.id ? (
                     <Input
-                      value={editingCustomer.telefone}
-                      onChange={(e) => setEditingCustomer({ ...editingCustomer, telefone: e.target.value })}
+                      value={editingCustomer!.telefone}
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer!, telefone: e.target.value })}
                     />
                   ) : (
                     customer.telefone
@@ -169,8 +214,8 @@ export function ClientesComponent() {
                 <TableCell>
                   {editingCustomer?.id === customer.id ? (
                     <Input
-                      value={editingCustomer.email}
-                      onChange={(e) => setEditingCustomer({ ...editingCustomer, email: e.target.value })}
+                      value={editingCustomer!.email}
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer!, email: e.target.value })}
                     />
                   ) : (
                     customer.email
@@ -179,8 +224,8 @@ export function ClientesComponent() {
                 <TableCell>
                   {editingCustomer?.id === customer.id ? (
                     <Input
-                      value={editingCustomer.cnpj}
-                      onChange={(e) => setEditingCustomer({ ...editingCustomer, cnpj: e.target.value })}
+                      value={editingCustomer!.cnpj}
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer!, cnpj: e.target.value })}
                     />
                   ) : (
                     customer.cnpj

@@ -82,9 +82,9 @@ export default function ProdutosPage() {
   }
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="mx-auto p-4">
       <h1 className="text-2xl font-bold mb-6">Gerenciamento de Produtos</h1>
-      
+
       <div className="grid gap-4 mb-6">
         <div className="grid grid-cols-2 gap-4">
           <Input
@@ -99,7 +99,7 @@ export default function ProdutosPage() {
             onChange={(e) => setNewProduto({ ...newProduto, preco: parseFloat(e.target.value) })}
           />
         </div>
-        
+
         <div className="grid grid-cols-2 gap-4">
           <Input
             type="number"
@@ -133,13 +133,14 @@ export default function ProdutosPage() {
             ))}
           </SelectContent>
         </Select>
-
-        <Button 
-          onClick={handleAddProduto}
-          className="w-full bg-black hover:bg-black/90 text-white"
-        >
-          Adicionar Produto
-        </Button>
+        <div className='flex justify-end'>
+          <Button
+            onClick={handleAddProduto}
+            className="w-1/6 bg-black hover:bg-black/90 text-white"
+          >
+            Adicionar Produto
+          </Button>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg overflow-hidden">
@@ -240,9 +241,9 @@ export default function ProdutosPage() {
                       <Button onClick={() => handleEditProduto(produto)} variant="outline" size="icon">
                         <Pencil size={16} />
                       </Button>
-                      <Button 
-                        onClick={() => handleRemoveProduto(produto.id!)} 
-                        variant="outline" 
+                      <Button
+                        onClick={() => handleRemoveProduto(produto.id!)}
+                        variant="outline"
                         size="icon"
                       >
                         <Trash2 size={16} />
