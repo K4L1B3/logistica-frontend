@@ -161,8 +161,8 @@ export default function ProdutosPage() {
                 <TableCell>
                   {editingProduto?.id === produto.id ? (
                     <Input
-                      value={editingProduto.nome}
-                      onChange={(e) => setEditingProduto({ ...editingProduto, nome: e.target.value })}
+                      value={editingProduto!.nome}
+                      onChange={(e) => setEditingProduto({ ...editingProduto!, nome: e.target.value })}
                     />
                   ) : (
                     produto.nome
@@ -172,8 +172,8 @@ export default function ProdutosPage() {
                   {editingProduto?.id === produto.id ? (
                     <Input
                       type="number"
-                      value={editingProduto.preco}
-                      onChange={(e) => setEditingProduto({ ...editingProduto, preco: parseFloat(e.target.value) })}
+                      value={editingProduto!.preco}
+                      onChange={(e) => setEditingProduto({ ...editingProduto!, preco: parseFloat(e.target.value) })}
                     />
                   ) : (
                     `R$ ${produto.preco.toFixed(2)}`
@@ -183,8 +183,8 @@ export default function ProdutosPage() {
                   {editingProduto?.id === produto.id ? (
                     <Input
                       type="number"
-                      value={editingProduto.quantidadeDisponivel}
-                      onChange={(e) => setEditingProduto({ ...editingProduto, quantidadeDisponivel: parseInt(e.target.value) })}
+                      value={editingProduto!.quantidadeDisponivel}
+                      onChange={(e) => setEditingProduto({ ...editingProduto!, quantidadeDisponivel: parseInt(e.target.value) })}
                     />
                   ) : (
                     produto.quantidadeDisponivel
@@ -193,8 +193,8 @@ export default function ProdutosPage() {
                 <TableCell>
                   {editingProduto?.id === produto.id ? (
                     <Input
-                      value={editingProduto.descricao}
-                      onChange={(e) => setEditingProduto({ ...editingProduto, descricao: e.target.value })}
+                      value={editingProduto!.descricao}
+                      onChange={(e) => setEditingProduto({ ...editingProduto!, descricao: e.target.value })}
                     />
                   ) : (
                     produto.descricao
@@ -203,11 +203,11 @@ export default function ProdutosPage() {
                 <TableCell>
                   {editingProduto?.id === produto.id ? (
                     <Select
-                      value={editingProduto.fornecedor.id}
+                      value={editingProduto!.fornecedor.id}
                       onValueChange={(value) => {
                         const fornecedor = fornecedores.find(f => f.id === value)
                         if (fornecedor) {
-                          setEditingProduto({ ...editingProduto, fornecedor })
+                          setEditingProduto({ ...editingProduto!, fornecedor })
                         }
                       }}
                     >

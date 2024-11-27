@@ -46,7 +46,6 @@ export function ClientesComponent() {
       try {
         const dados = await getAllClients();
         setCustomers(dados);
-        console.log(dados)
       } catch (erro) {
         console.error('Erro ao buscar clientes:', erro);
       }
@@ -60,14 +59,15 @@ export function ClientesComponent() {
     const customerToAdd = {
       ...newCustomer,
     }
-    try {
-      const response = await createClient(customerToAdd)
-      console.log('Cliente criado RESPONSE: ', response)
 
-      setCustomers([...customers, response])
+    try {
+      const response = await createClient(customerToAdd);
+      console.log('Cliente criado RESPONSE: ', response);
+      setCustomers([...customers, response]);
     } catch (error) {
       console.error(error);
     }
+
     setNewCustomer({
       nome: '',
       telefone: '',
@@ -85,8 +85,6 @@ export function ClientesComponent() {
       if (editingCustomer.id && editingCustomer) {
         try {
           const response = await updateClient(editingCustomer.id!, editingCustomer)
-          console.log('Cliente Atualizado RESPONSE: ', response)
-          
           setCustomers(prevCustumers => (
             prevCustumers.map(c => c.id === editingCustomer.id ? editingCustomer : c)
           )
@@ -95,9 +93,9 @@ export function ClientesComponent() {
         } catch (error) {
           console.error(error, 'Não foi possível criar o cliente');
         }
-      } else {
-        console.error('O custumer está vazio')
-      }
+      } 
+    } else {
+      console.error('O custumer está vazio')
     }
   }
 

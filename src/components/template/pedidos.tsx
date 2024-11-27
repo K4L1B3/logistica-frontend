@@ -227,11 +227,11 @@ export function PedidosPage() {
                 <TableCell>
                   {editingPedido?.id === pedido.id ? (
                     <Select
-                      value={editingPedido.cliente?.id}
+                      value={editingPedido!.cliente?.id}
                       onValueChange={(value) => {
                         const cliente = clientes.find(c => c.id === value)
                         if (cliente) {
-                          setEditingPedido({ ...editingPedido, cliente })
+                          setEditingPedido({ ...editingPedido!, cliente })
                         }
                       }}
                     >
@@ -253,11 +253,11 @@ export function PedidosPage() {
                 <TableCell>
                   {editingPedido?.id === pedido.id ? (
                     <Select
-                      value={editingPedido.produto?.id}
+                      value={editingPedido!.produto?.id}
                       onValueChange={(value) => {
                         const produto = produtos.find(p => p.id === value)
                         if (produto) {
-                          setEditingPedido({ ...editingPedido, produto, valor: produto.preco })
+                          setEditingPedido({ ...editingPedido!, produto, valor: produto.preco })
                         }
                       }}
                     >
@@ -280,8 +280,8 @@ export function PedidosPage() {
                   {editingPedido?.id === pedido.id ? (
                     <Input
                       type="number"
-                      value={editingPedido.valor}
-                      onChange={(e) => setEditingPedido({ ...editingPedido, valor: parseFloat(e.target.value) })}
+                      value={editingPedido!.valor}
+                      onChange={(e) => setEditingPedido({ ...editingPedido!, valor: parseFloat(e.target.value) })}
                     />
                   ) : (
                     `R$ ${pedido.valor.toFixed(2)}`
@@ -291,8 +291,8 @@ export function PedidosPage() {
                   {editingPedido?.id === pedido.id ? (
                     <Input
                       type="number"
-                      value={editingPedido.qtd}
-                      onChange={(e) => setEditingPedido({ ...editingPedido, qtd: parseInt(e.target.value) })}
+                      value={editingPedido!.qtd}
+                      onChange={(e) => setEditingPedido({ ...editingPedido!, qtd: parseInt(e.target.value) })}
                     />
                   ) : (
                     pedido.qtd
@@ -301,8 +301,8 @@ export function PedidosPage() {
                 <TableCell>
                   {editingPedido?.id === pedido.id ? (
                     <Select
-                      value={editingPedido.statusPedido}
-                      onValueChange={(value) => setEditingPedido({ ...editingPedido, statusPedido: value as StatusPedido })}
+                      value={editingPedido!.statusPedido}
+                      onValueChange={(value) => setEditingPedido({ ...editingPedido!, statusPedido: value as StatusPedido })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione um status" />

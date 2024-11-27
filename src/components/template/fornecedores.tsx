@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PlusCircle, Pencil, Trash2 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,6 +13,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import { createSupplier, deleteSupplier, getAllSuppliers, updateSupplier } from '@/services/fornecedor.service'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface Fornecedor {
   id?: string;
@@ -24,11 +26,7 @@ interface Fornecedor {
 }
 
 export function FornecedoresComponent() {
-  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([
-    { id: '1', nome: 'Fornecedor A', telefone: '(11) 1234-5678', email: 'contato@fornecedora.com', cnpj: '12.345.678/0001-90', tipoServico: 'Matéria-prima' },
-    { id: '2', nome: 'Fornecedor B', telefone: '(21) 9876-5432', email: 'contato@fornecedorb.com', cnpj: '98.765.432/0001-10', tipoServico: 'Embalagens' },
-  ])
-
+  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([])
   const [editingFornecedor, setEditingFornecedor] = useState<Fornecedor | null>(null)
   const [newFornecedor, setNewFornecedor] = useState<Fornecedor>({
     nome: '',
@@ -38,12 +36,36 @@ export function FornecedoresComponent() {
     tipoServico: '',
   })
 
-  const handleAddFornecedor = () => {
+  useEffect(() => {
+
+    const fetchSuppliers = async () => {
+      try {
+        const suppliersData = await getAllSuppliers();
+        setFornecedores(suppliersData);
+
+      } catch (error) {
+        console.error(error, 'erro ao buscar clientes');
+      }
+
+    }
+
+    fetchSuppliers();
+  }, [])
+
+  const handleAddFornecedor = async () => {
     const fornecedorToAdd = {
       ...newFornecedor,
-      id: Date.now().toString(),
     }
-    setFornecedores([...fornecedores, fornecedorToAdd])
+
+    try {
+      const response = await createSupplier(fornecedorToAdd);
+      console.log('Cliente criado RESPONSE: ', response);
+      setFornecedores([...fornecedores, response])
+
+    } catch (error) {
+      console.error(error, 'erro ao adicionar fornecedor');
+    }
+
     setNewFornecedor({
       nome: '',
       telefone: '',
@@ -57,14 +79,28 @@ export function FornecedoresComponent() {
     setEditingFornecedor(fornecedor)
   }
 
-  const handleSaveFornecedor = () => {
+  const handleSaveFornecedor = async () => {
     if (editingFornecedor) {
-      setFornecedores(fornecedores.map(f => f.id === editingFornecedor.id ? editingFornecedor : f))
-      setEditingFornecedor(null)
+      if (editingFornecedor.id && editingFornecedor) {
+        try {
+          const response = await updateSupplier(editingFornecedor.id!, editingFornecedor);
+          setFornecedores(prevFornecedores => (
+            prevFornecedores.map(c => c.id === editingFornecedor.id ? editingFornecedor : c)
+          )
+          )
+          setEditingFornecedor(null);
+        } catch (error) {
+          console.error(error, 'erro ao salvar/criar fornecedor');
+        }
+      }
+    } else {
+      console.error('ERRO: O fornecedor está vazio');
     }
+
   }
 
-  const handleRemoveFornecedor = (id: string) => {
+  const handleRemoveFornecedor = async (id: string) => {
+    await deleteSupplier(id);
     setFornecedores(fornecedores.filter(f => f.id !== id))
   }
 
@@ -132,12 +168,22 @@ export function FornecedoresComponent() {
                 <Label htmlFor="tipoServico" className="text-right">
                   Tipo de Serviço
                 </Label>
-                <Input
-                  id="tipoServico"
+                <Select
                   value={newFornecedor.tipoServico}
-                  onChange={(e) => setNewFornecedor({ ...newFornecedor, tipoServico: e.target.value })}
-                  className="col-span-3"
-                />
+                  onValueChange={(value) => setNewFornecedor({ ...newFornecedor, tipoServico: value })}
+                >
+                  <SelectTrigger className="w-full col-span-3">
+                    <SelectValue placeholder="Selecione o tipo de serviço" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Selecione</SelectLabel>
+                      <SelectItem value="TRANSPORTE">TRANSPORTE</SelectItem>
+                      <SelectItem value="ARMAZENAMENTO">ARMAZENAMENTO</SelectItem>
+                      <SelectItem value="SUPRIMENTOS">SUPRIMENTOS</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <DialogTrigger asChild>
@@ -152,7 +198,7 @@ export function FornecedoresComponent() {
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>Telefone</TableHead>
-              
+
               <TableHead>Email</TableHead>
               <TableHead>CNPJ</TableHead>
               <TableHead>Tipo de Serviço</TableHead>
@@ -165,8 +211,8 @@ export function FornecedoresComponent() {
                 <TableCell>
                   {editingFornecedor?.id === fornecedor.id ? (
                     <Input
-                      value={editingFornecedor.nome}
-                      onChange={(e) => setEditingFornecedor({ ...editingFornecedor, nome: e.target.value })}
+                      value={editingFornecedor!.nome}
+                      onChange={(e) => setEditingFornecedor({ ...editingFornecedor!, nome: e.target.value })}
                     />
                   ) : (
                     fornecedor.nome
@@ -175,8 +221,8 @@ export function FornecedoresComponent() {
                 <TableCell>
                   {editingFornecedor?.id === fornecedor.id ? (
                     <Input
-                      value={editingFornecedor.telefone}
-                      onChange={(e) => setEditingFornecedor({ ...editingFornecedor, telefone: e.target.value })}
+                      value={editingFornecedor!.telefone}
+                      onChange={(e) => setEditingFornecedor({ ...editingFornecedor!, telefone: e.target.value })}
                     />
                   ) : (
                     fornecedor.telefone
@@ -185,8 +231,8 @@ export function FornecedoresComponent() {
                 <TableCell>
                   {editingFornecedor?.id === fornecedor.id ? (
                     <Input
-                      value={editingFornecedor.email}
-                      onChange={(e) => setEditingFornecedor({ ...editingFornecedor, email: e.target.value })}
+                      value={editingFornecedor!.email}
+                      onChange={(e) => setEditingFornecedor({ ...editingFornecedor!, email: e.target.value })}
                     />
                   ) : (
                     fornecedor.email
@@ -195,8 +241,8 @@ export function FornecedoresComponent() {
                 <TableCell>
                   {editingFornecedor?.id === fornecedor.id ? (
                     <Input
-                      value={editingFornecedor.cnpj}
-                      onChange={(e) => setEditingFornecedor({ ...editingFornecedor, cnpj: e.target.value })}
+                      value={editingFornecedor!.cnpj}
+                      onChange={(e) => setEditingFornecedor({ ...editingFornecedor!, cnpj: e.target.value })}
                     />
                   ) : (
                     fornecedor.cnpj
@@ -204,10 +250,24 @@ export function FornecedoresComponent() {
                 </TableCell>
                 <TableCell>
                   {editingFornecedor?.id === fornecedor.id ? (
-                    <Input
-                      value={editingFornecedor.tipoServico}
-                      onChange={(e) => setEditingFornecedor({ ...editingFornecedor, tipoServico: e.target.value })}
-                    />
+                    <Select
+                      value={editingFornecedor!.tipoServico}
+                      onValueChange={(value) =>
+                        setEditingFornecedor({ ...editingFornecedor!, tipoServico: value })
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Selecione o tipo de serviço" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectLabel>Selecione</SelectLabel>
+                          <SelectItem value="TRANSPORTE">TRANSPORTE</SelectItem>
+                          <SelectItem value="ARMAZENAMENTO">ARMAZENAMENTO</SelectItem>
+                          <SelectItem value="SUPRIMENTOS">SUPRIMENTOS</SelectItem>
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
                   ) : (
                     fornecedor.tipoServico
                   )}
