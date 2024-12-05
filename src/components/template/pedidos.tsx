@@ -1,7 +1,8 @@
+// src/pages/PedidosPage.tsx
 'use client'
 
-import { useState, useRef } from 'react'
-import { PlusCircle, Pencil, Trash2, FileUp, Check, X } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { Pencil, Trash2, Check, X } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -13,86 +14,103 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
+import {
+  getAllPedidos,
+  createPedido,
+  updatePedidoStatus,
+  deletePedido
+} from '@/services/pedido.service';
+import { getAllClients } from '@/services/client.service';
+import { getAllProdutos } from '@/services/produto.service';
+import { Pedido as PedidoDTO, StatusPedido } from '@/services/dto/Pedido'
+import { Cliente } from '@/services/dto/Cliente'
+import { Produto } from '@/services/dto/Produto'
 
-interface Cliente {
-  id?: string;
-  nome: string;
-}
-
-interface Produto {
-  id?: string;
-  nome: string;
-  preco: number;
-}
-
-enum StatusPedido {
-  PEDIDO_REALIZADO = 'PEDIDO_REALIZADO',
-  PEDIDO_CONFIRMADO = 'PEDIDO_CONFIRMADO',
-  NOTA_GERADA = 'NOTA_GERADA',
-  PEDIDO_RECEBIDO = 'PEDIDO_RECEBIDO',
-  ENVIADO_TRANSPORTADORA = 'ENVIADO_TRANSPORTADORA',
-  RECEBIDO_TRANSPORTADORA = 'RECEBIDO_TRANSPORTADORA',
-  MERCADORIA_TRANSITO = 'MERCADORIA_TRANSITO',
-  PEDIDO_ENTREGUE = 'PEDIDO_ENTREGUE',
-  PROCESSO_DEVOLUCAO = 'PROCESSO_DEVOLUCAO',
-  PEDIDO_DEVOLVIDO = 'PEDIDO_DEVOLVIDO',
-  PEDIDO_CANCELADO = 'PEDIDO_CANCELADO',
-  PROBLEMA_ENTREGA = 'PROBLEMA_ENTREGA'
-}
-
-interface Pedido {
-  id?: number;
-  cliente?: Cliente;
-  produto?: Produto;
-  notaFiscal?: File;
-  valor: number;
+interface PedidoInput {
+  clienteId: string;
+  produtoId: string;
   qtd: number;
-  statusPedido: StatusPedido;
 }
 
 export function PedidosPage() {
-  const [pedidos, setPedidos] = useState<Pedido[]>([])
-  const [clientes] = useState<Cliente[]>([
-    { id: '1', nome: 'Cliente A' },
-    { id: '2', nome: 'Cliente B' },
-  ])
-  const [produtos] = useState<Produto[]>([
-    { id: '1', nome: 'Produto A', preco: 100 },
-    { id: '2', nome: 'Produto B', preco: 200 },
-  ])
+  const [pedidos, setPedidos] = useState<PedidoDTO[]>([])
+  const [clientes, setClientes] = useState<Cliente[]>([])
+  const [produtos, setProdutos] = useState<Produto[]>([])
 
-  const [newPedido, setNewPedido] = useState<Pedido>({
-    valor: 0,
+  const [newPedido, setNewPedido] = useState<PedidoInput>({
+    clienteId: '',
+    produtoId: '',
     qtd: 0,
-    statusPedido: StatusPedido.PEDIDO_REALIZADO,
   })
-  const [editingPedido, setEditingPedido] = useState<Pedido | null>(null)
+  const [editingPedido, setEditingPedido] = useState<PedidoDTO | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleAddPedido = () => {
-    const pedidoToAdd = {
-      ...newPedido,
-      id: Date.now(),
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [pedidosData, clientesData, produtosData] = await Promise.all([
+          getAllPedidos(),
+          getAllClients(),
+          getAllProdutos(),
+        ])
+        setPedidos(pedidosData)
+        setClientes(clientesData)
+        setProdutos(produtosData)
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error)
+      }
     }
-    setPedidos([...pedidos, pedidoToAdd])
-    setNewPedido({
-      valor: 0,
-      qtd: 0,
-      statusPedido: StatusPedido.PEDIDO_REALIZADO,
-    })
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
+
+    fetchData()
+  }, [])
+
+  const handleAddPedido = async () => {
+    try {
+      if (!newPedido.clienteId || !newPedido.produtoId) {
+        alert('Por favor, selecione um cliente e um produto.')
+        return
+      }
+
+      const pedidoPayload: PedidoInput = {
+        clienteId: newPedido.clienteId,
+        produtoId: newPedido.produtoId,
+        qtd: newPedido.qtd,
+      }
+
+      const createdPedido = await createPedido(pedidoPayload)
+      setPedidos([...pedidos, createdPedido])
+      setNewPedido({ clienteId: '', produtoId: '', qtd: 0 })
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    } catch (error) {
+      console.error('Erro ao adicionar pedido:', error)
     }
   }
 
-  const handleEditPedido = (pedido: Pedido) => {
+  const handleEditPedido = (pedido: PedidoDTO) => {
     setEditingPedido({ ...pedido })
   }
 
-  const handleSavePedido = () => {
+  const handleSavePedido = async () => {
     if (editingPedido) {
-      setPedidos(pedidos.map(p => p.id === editingPedido.id ? editingPedido : p))
-      setEditingPedido(null)
+      try {
+        // Determinar a rota correta com base no status
+        let updateRoute = `/pedido/update/status/${editingPedido.id}`
+        if (
+          editingPedido.statusPedido === StatusPedido.PROCESSO_DEVOLUCAO ||
+          editingPedido.statusPedido === StatusPedido.PEDIDO_DEVOLVIDO ||
+          editingPedido.statusPedido === StatusPedido.PEDIDO_CANCELADO
+        ) {
+          updateRoute = `/pedido/update/status/devolucao/${editingPedido.id}`
+        }
+
+        await updatePedidoStatus(editingPedido.id, editingPedido.statusPedido, updateRoute)
+        setPedidos(pedidos.map(p => p.id === editingPedido.id ? editingPedido : p))
+        setEditingPedido(null)
+      } catch (error) {
+        console.error('Erro ao atualizar pedido:', error)
+      }
     }
   }
 
@@ -100,14 +118,12 @@ export function PedidosPage() {
     setEditingPedido(null)
   }
 
-  const handleRemovePedido = (id: number) => {
-    setPedidos(pedidos.filter(p => p.id !== id))
-  }
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      setNewPedido({ ...newPedido, notaFiscal: file })
+  const handleRemovePedido = async (id: number) => {
+    try {
+      await deletePedido(id)
+      setPedidos(pedidos.filter(p => p.id !== id))
+    } catch (error) {
+      console.error('Erro ao remover pedido:', error)
     }
   }
 
@@ -123,11 +139,9 @@ export function PedidosPage() {
       <div className="grid gap-4 mb-6">
         <div className="grid grid-cols-2 gap-4">
           <Select
+            value={newPedido.clienteId}
             onValueChange={(value) => {
-              const cliente = clientes.find(c => c.id === value)
-              if (cliente) {
-                setNewPedido({ ...newPedido, cliente })
-              }
+              setNewPedido({ ...newPedido, clienteId: value })
             }}
           >
             <SelectTrigger>
@@ -135,7 +149,7 @@ export function PedidosPage() {
             </SelectTrigger>
             <SelectContent>
               {clientes.map((cliente) => (
-                <SelectItem key={cliente.id} value={cliente.id!}>
+                <SelectItem key={cliente.id} value={cliente.id}>
                   {cliente.nome}
                 </SelectItem>
               ))}
@@ -143,11 +157,9 @@ export function PedidosPage() {
           </Select>
 
           <Select
+            value={newPedido.produtoId}
             onValueChange={(value) => {
-              const produto = produtos.find(p => p.id === value)
-              if (produto) {
-                setNewPedido({ ...newPedido, produto, valor: produto.preco })
-              }
+              setNewPedido({ ...newPedido, produtoId: value })
             }}
           >
             <SelectTrigger>
@@ -155,7 +167,7 @@ export function PedidosPage() {
             </SelectTrigger>
             <SelectContent>
               {produtos.map((produto) => (
-                <SelectItem key={produto.id} value={produto.id!}>
+                <SelectItem key={produto.id} value={produto.id}>
                   {produto.nome}
                 </SelectItem>
               ))}
@@ -163,21 +175,17 @@ export function PedidosPage() {
           </Select>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           <Input
             type="number"
-            placeholder="0"
-            value={newPedido.valor}
-            onChange={(e) => setNewPedido({ ...newPedido, valor: parseFloat(e.target.value) })}
-          />
-          <Input
-            type="number"
-            placeholder="0"
+            placeholder="Quantidade"
             value={newPedido.qtd}
             onChange={(e) => setNewPedido({ ...newPedido, qtd: parseInt(e.target.value) })}
+            min={1}
           />
         </div>
 
+        {/* 
         <div className="flex items-center gap-4">
           <Label htmlFor="notaFiscal" className="cursor-pointer">
             <div className="flex items-center gap-2 p-2 border rounded-md">
@@ -193,8 +201,9 @@ export function PedidosPage() {
             onChange={handleFileChange}
             ref={fileInputRef}
           />
-          {newPedido.notaFiscal && <span>{newPedido.notaFiscal.name}</span>}
+          {newPedido.notaFiscal && <span>{newPedido.notaFiscal}</span>}
         </div>
+        */}
 
         <div className='flex justify-end'>
           <Button
@@ -204,8 +213,6 @@ export function PedidosPage() {
             Adicionar Pedido
           </Button>
         </div>
-
-
       </div>
 
       <div className="bg-white rounded-lg overflow-hidden">
@@ -217,136 +224,136 @@ export function PedidosPage() {
               <TableHead>Valor</TableHead>
               <TableHead>Quantidade</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Nota Fiscal</TableHead>
+              {/* <TableHead>Nota Fiscal</TableHead> */}
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {pedidos.map((pedido) => (
-              <TableRow key={pedido.id}>
-                <TableCell>
-                  {editingPedido?.id === pedido.id ? (
-                    <Select
-                      value={editingPedido!.cliente?.id}
-                      onValueChange={(value) => {
-                        const cliente = clientes.find(c => c.id === value)
-                        if (cliente) {
-                          setEditingPedido({ ...editingPedido!, cliente })
-                        }
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um cliente" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {clientes.map((cliente) => (
-                          <SelectItem key={cliente.id} value={cliente.id!}>
-                            {cliente.nome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    pedido.cliente?.nome
-                  )}
-                </TableCell>
-                <TableCell>
-                  {editingPedido?.id === pedido.id ? (
-                    <Select
-                      value={editingPedido!.produto?.id}
-                      onValueChange={(value) => {
-                        const produto = produtos.find(p => p.id === value)
-                        if (produto) {
-                          setEditingPedido({ ...editingPedido!, produto, valor: produto.preco })
-                        }
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um produto" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {produtos.map((produto) => (
-                          <SelectItem key={produto.id} value={produto.id!}>
-                            {produto.nome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    pedido.produto?.nome
-                  )}
-                </TableCell>
-                <TableCell>
-                  {editingPedido?.id === pedido.id ? (
-                    <Input
-                      type="number"
-                      value={editingPedido!.valor}
-                      onChange={(e) => setEditingPedido({ ...editingPedido!, valor: parseFloat(e.target.value) })}
-                    />
-                  ) : (
-                    `R$ ${pedido.valor.toFixed(2)}`
-                  )}
-                </TableCell>
-                <TableCell>
-                  {editingPedido?.id === pedido.id ? (
-                    <Input
-                      type="number"
-                      value={editingPedido!.qtd}
-                      onChange={(e) => setEditingPedido({ ...editingPedido!, qtd: parseInt(e.target.value) })}
-                    />
-                  ) : (
-                    pedido.qtd
-                  )}
-                </TableCell>
-                <TableCell>
-                  {editingPedido?.id === pedido.id ? (
-                    <Select
-                      value={editingPedido!.statusPedido}
-                      onValueChange={(value) => setEditingPedido({ ...editingPedido!, statusPedido: value as StatusPedido })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.values(StatusPedido).map((status) => (
-                          <SelectItem key={status} value={status}>
-                            {getStatusLabel(status)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    getStatusLabel(pedido.statusPedido)
-                  )}
-                </TableCell>
-                <TableCell>{pedido.notaFiscal ? pedido.notaFiscal.name : 'Não enviada'}</TableCell>
-                <TableCell className="text-right">
-                  {editingPedido?.id === pedido.id ? (
-                    <div className="flex justify-end gap-2">
-                      <Button onClick={handleSavePedido} variant="outline" size="icon">
-                        <Check size={16} />
-                      </Button>
-                      <Button onClick={handleCancelEdit} variant="outline" size="icon">
-                        <X size={16} />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex justify-end gap-2">
-                      <Button onClick={() => handleEditPedido(pedido)} variant="outline" size="icon">
-                        <Pencil size={16} />
-                      </Button>
-                      <Button
-                        onClick={() => handleRemovePedido(pedido.id!)}
-                        variant="outline"
-                        size="icon"
+            {pedidos.map((pedido) => {
+              const cliente = pedido.cliente
+              const produto = pedido.produto
+
+              return (
+                <TableRow key={pedido.id}>
+                  <TableCell>
+                    {editingPedido?.id === pedido.id ? (
+                      <Select
+                        value={editingPedido.cliente.id}
+                        onValueChange={(value) => {
+                          const selectedCliente = clientes.find(c => c.id === value)
+                          if (selectedCliente) {
+                            setEditingPedido({ ...editingPedido, cliente: selectedCliente })
+                          }
+                        }}
                       >
-                        <Trash2 size={16} />
-                      </Button>
-                    </div>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um cliente" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {clientes.map((cliente) => (
+                            <SelectItem key={cliente.id} value={cliente.id}>
+                              {cliente.nome}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      cliente ? cliente.nome : 'Cliente não encontrado'
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {editingPedido?.id === pedido.id ? (
+                      <Select
+                        value={editingPedido.produto.id}
+                        onValueChange={(value) => {
+                          const selectedProduto = produtos.find(p => p.id === value)
+                          if (selectedProduto) {
+                            setEditingPedido({ ...editingPedido, produto: selectedProduto })
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um produto" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {produtos.map((produto) => (
+                            <SelectItem key={produto.id} value={produto.id}>
+                              {produto.nome}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      produto ? produto.nome : 'Produto não encontrado'
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {pedido.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </TableCell>
+                  <TableCell>
+                    {editingPedido?.id === pedido.id ? (
+                      <Input
+                        type="number"
+                        value={editingPedido.qtd}
+                        onChange={(e) => setEditingPedido({ ...editingPedido, qtd: parseInt(e.target.value) })}
+                        min={1}
+                      />
+                    ) : (
+                      pedido.qtd
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {editingPedido?.id === pedido.id ? (
+                      <Select
+                        value={editingPedido.statusPedido}
+                        onValueChange={(value) => setEditingPedido({ ...editingPedido, statusPedido: value as StatusPedido })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.values(StatusPedido).map((status) => (
+                            <SelectItem key={status} value={status}>
+                              {getStatusLabel(status)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      getStatusLabel(pedido.statusPedido)
+                    )}
+                  </TableCell>
+                  {/* 
+                  <TableCell>{pedido.notaFiscal ? pedido.notaFiscal : 'Não enviada'}</TableCell>
+                  */}
+                  <TableCell className="text-right">
+                    {editingPedido?.id === pedido.id ? (
+                      <div className="flex justify-end gap-2">
+                        <Button onClick={handleSavePedido} variant="outline" size="icon">
+                          <Check size={16} />
+                        </Button>
+                        <Button onClick={handleCancelEdit} variant="outline" size="icon">
+                          <X size={16} />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex justify-end gap-2">
+                        <Button onClick={() => handleEditPedido(pedido)} variant="outline" size="icon">
+                          <Pencil size={16} />
+                        </Button>
+                        <Button
+                          onClick={() => handleRemovePedido(pedido.id)}
+                          variant="outline"
+                          size="icon"
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      </div>
+                    )}
+                  </TableCell>
+                </TableRow>
+              )
+            })}
           </TableBody>
         </Table>
       </div>

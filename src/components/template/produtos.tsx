@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PlusCircle, Pencil, Trash2, Check, X } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,6 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { getAllProdutos, createProduto, updateProduto, deleteProduto } from '@/services/produto.service'
+import { getAllSuppliers } from '@/services/fornecedor.service'
 
 interface Fornecedor {
   id?: string;
@@ -19,66 +21,99 @@ interface Fornecedor {
   telefone: string;
   email: string;
   cnpj: string;
+  tipoServico: string;
 }
 
-interface Produto {
+export interface Produto {
   id?: string;
   nome: string;
   preco: number;
   quantidadeDisponivel: number;
   descricao: string;
-  fornecedor: Fornecedor;
+  fornecedorId?: Fornecedor["id"]; // Enviado ao backend
+  fornecedor?: Fornecedor; // Retornado pelo backend
 }
 
 export default function ProdutosPage() {
   const [produtos, setProdutos] = useState<Produto[]>([])
-  const [fornecedores] = useState<Fornecedor[]>([
-    { id: '1', nome: 'Fornecedor A', telefone: '(11) 1234-5678', email: 'contato@fornecedora.com', cnpj: '12.345.678/0001-90' },
-    { id: '2', nome: 'Fornecedor B', telefone: '(21) 9876-5432', email: 'contato@fornecedorb.com', cnpj: '98.765.432/0001-10' },
-  ])
-
+  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([])
   const [newProduto, setNewProduto] = useState<Produto>({
     nome: '',
     preco: 0,
     quantidadeDisponivel: 0,
     descricao: '',
-    fornecedor: {} as Fornecedor,
-  })
+    fornecedorId: '',
+  });
 
   const [editingProduto, setEditingProduto] = useState<Produto | null>(null)
 
-  const handleAddProduto = () => {
-    const produtoToAdd = {
-      ...newProduto,
-      id: Date.now().toString(),
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const produtosData = await getAllProdutos()
+        const fornecedoresData = await getAllSuppliers()
+        setProdutos(produtosData)
+        setFornecedores(fornecedoresData)
+      } catch (error) {
+        console.error('Erro ao buscar dados:', error)
+      }
     }
-    setProdutos([...produtos, produtoToAdd])
-    setNewProduto({
-      nome: '',
-      preco: 0,
-      quantidadeDisponivel: 0,
-      descricao: '',
-      fornecedor: {} as Fornecedor,
-    })
+
+    fetchData()
+  }, [])
+
+  const handleAddProduto = async () => {
+    try {
+      const produtoToAdd = await createProduto(newProduto)
+      setProdutos([...produtos, produtoToAdd])
+      setNewProduto({
+        nome: '',
+        preco: 0,
+        quantidadeDisponivel: 0,
+        descricao: '',
+        fornecedorId: '',
+      })
+    } catch (error) {
+      console.error('Erro ao adicionar produto:', error)
+    }
   }
 
   const handleEditProduto = (produto: Produto) => {
-    setEditingProduto({ ...produto })
+    setEditingProduto(produto) // Preenche os campos do produto em edição
   }
 
-  const handleSaveProduto = () => {
+  const handleSaveProduto = async () => {
     if (editingProduto) {
-      setProdutos(produtos.map(p => p.id === editingProduto.id ? editingProduto : p))
-      setEditingProduto(null)
+      if (editingProduto.id) {
+        try {
+          const response = await updateProduto(editingProduto.id, editingProduto) // Atualiza no banco
+          setProdutos(prevProdutos =>
+            prevProdutos.map(p => p.id === editingProduto.id ? editingProduto : p) // Atualiza localmente
+          )
+          setEditingProduto(null) // Limpa o estado de edição
+        } catch (error) {
+          console.error('Erro ao salvar produto:', error)
+        }
+      } else {
+        console.error('Erro: Produto sem ID')
+      }
+    } else {
+      console.error('Erro: Nenhum produto em edição')
     }
   }
+
 
   const handleCancelEdit = () => {
     setEditingProduto(null)
   }
 
-  const handleRemoveProduto = (id: string) => {
-    setProdutos(produtos.filter(p => p.id !== id))
+  const handleRemoveProduto = async (id: string) => {
+    try {
+      await deleteProduto(id)
+      setProdutos(produtos.filter(p => p.id !== id))
+    } catch (error) {
+      console.error('Erro ao remover produto:', error)
+    }
   }
 
   return (
@@ -94,7 +129,7 @@ export default function ProdutosPage() {
           />
           <Input
             type="number"
-            placeholder="0"
+            placeholder="R$0.00"
             value={newProduto.preco}
             onChange={(e) => setNewProduto({ ...newProduto, preco: parseFloat(e.target.value) })}
           />
@@ -103,7 +138,7 @@ export default function ProdutosPage() {
         <div className="grid grid-cols-2 gap-4">
           <Input
             type="number"
-            placeholder="0"
+            placeholder="QTD:000"
             value={newProduto.quantidadeDisponivel}
             onChange={(e) => setNewProduto({ ...newProduto, quantidadeDisponivel: parseInt(e.target.value) })}
           />

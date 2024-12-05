@@ -5,8 +5,19 @@ import { Fornecedor } from './dto/Fornecedor';
 const API_URL = '/fornecedor';
 
 export const getAllSuppliers = async (): Promise<Fornecedor[]> => {
-  const response = await api.get<Fornecedor[]>(`${API_URL}/get`);
-  return response.data;
+  try {
+    const response = await api.get<Fornecedor[]>(`${API_URL}/get`);
+    
+     // Validação: garante que o retorno seja um array
+     if (!Array.isArray(response.data)) {
+      throw new Error('Dados retornados pela API não são um array.');
+    }
+
+    return response.data;
+  } catch (error) {
+    console.error('Erro ao buscar clientes:', error);
+    throw error; 
+  }
 };
 
 export const createSupplier = async (supplierData: Fornecedor): Promise<Fornecedor> => {

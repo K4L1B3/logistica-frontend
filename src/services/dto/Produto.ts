@@ -7,5 +7,6 @@ export interface Produto {
   preco: number;
   quantidadeDisponivel: number;
   descricao: string;
-  fornecedor: Fornecedor;
+  fornecedorId?: Fornecedor["id"]; // Enviado ao backend
+  fornecedor?: Fornecedor; // Retornado pelo backend
 }

@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ClientesComponent } from '../components/template/clientes'
 import { FornecedoresComponent } from '../components/template/fornecedores'
 import { PedidosPage } from '../components/template/pedidos'
+import ProdutosPage from '@/components/template/produtos'
 // import ProdutosPage, { ProdutosComponent } from '../components/template/produtos'
 
 export default function ManagementPage() {
@@ -48,7 +49,7 @@ export default function ManagementPage() {
           <FornecedoresComponent />
         </TabsContent>
         <TabsContent value="produtos">
-          {/* <ProdutosPage/> */}
+          <ProdutosPage/>
         </TabsContent>
         <TabsContent value="pedidos">
           <PedidosPage />

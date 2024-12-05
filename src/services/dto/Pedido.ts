@@ -26,3 +26,10 @@ export interface Pedido {
   qtd: number;
   statusPedido: StatusPedido;
 }
+
+// src/services/dto/PedidoInput.ts
+export interface PedidoInput {
+  clienteId: string;
+  produtoId: string;
+  qtd: number;
+}
