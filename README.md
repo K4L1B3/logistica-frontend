@@ -1,6 +1,7 @@
 # Como rodar o projeto?
 
 1 - Crie um arquivo .env na pasta raiz do projeto
+<br/>
 2 - adicione a variavel de ambiente que é utilizada para fazer a comunicação do frontend com o backend
 
 ```js
